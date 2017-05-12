@@ -23,6 +23,8 @@ val Lines_conf = """# configuration file
     # 'jdbc:oracle:thin:@111.222.333.444:1521:'
     # 'u/p@ip/s'
   # for sqlite: 'jdbc:sqlite:test.db'
+'dba_user': 'ora'
+'dba_pw': 'cle'
 'sql':
   - select count(*) from muser;
   - |
@@ -66,9 +68,14 @@ fun do_dba() {
 //		println( params.size )		println( params.keys )		println( params.get("sql"))
 	val sqls: List<String> = params.get("sql") as List<String>
 //		println( sqls[1] )		println( params.get("Class_forName") )
-	Class.forName( params.get("Class_forName") as String )
+	val class_forName = params.get("Class_forName") as String
+	Class.forName(class_forName)
 	try {
-		val conn = DriverManager.getConnection( params.get("uri_DriverManager") as String )
+		val conn = if(class_forName=="org.sqlite.JDBC") DriverManager.getConnection(
+				params.get("uri_DriverManager") as String ) else DriverManager.getConnection(
+				params.get("uri_DriverManager") as String,
+				params.get("dba_user") as String,
+				params.get("dba_pw") as String )
 		val sttm = conn.createStatement()
 		for( sql in sqls ){
 			sttm.setQueryTimeout(30)
@@ -83,7 +90,7 @@ fun do_dba() {
 				print(System.getProperty("line.separator"))
 				cnt++
 			}
-			
+
 			println(" rs size: ${cnt}")
 		}
 		sttm.close()
