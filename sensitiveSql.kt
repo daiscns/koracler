@@ -37,6 +37,7 @@ val Lines_conf = """# configuration file
 'safety_counts': 100000
 'safety_seconds': 6
 'file_name_out': 'out.txt'
+'flg_2print_out': 'n'
 
 # vvvvvv not implemented yet below vvvvvv
 """
@@ -55,17 +56,14 @@ fun mk_params(): MutableMap<*, *> {
 		val yaml = Yaml()
 		val list: MutableMap<*, *> = yaml.load( FileInputStream( File(flnm_conf) ) ) as LinkedHashMap<*, *>
 		return list
-/*
-{exec_sqlplus=sqlplus -s, uri_oracle=u/p@ip/s, sql=[select count(*) from test
-  where xx='yy';
-, select * from test
-  where xx='yy';
-], safety_counts=100000, safety_seconds=2, file_name_out=out.txt}
-*/
 	} catch (e: Exception) {
 		println(e)
 		throw e
 	}
+}
+fun print_write_out(fl_log: File, mssg: String, flg_2print_out: Boolean = false) {
+	if(flg_2print_out) print(mssg)
+	fl_log.appendText(mssg)
 }
 fun do_dba() {
 	val params = mk_params()
@@ -80,7 +78,11 @@ fun do_dba() {
 	val uri_DriverManager 	= params.get("uri_DriverManager") as String
 	val dba_user 				= params.get("dba_user") as String
 	val dba_pw 					= params.get("dba_pw") as String
+	val flg_2print_out 		= if("y"==(params.get("flg_2print_out") as String)) true else false
+//	println("   flg_2print_out: ${flg_2print_out}")
 	var flg_overtime			= false;
+	val fl_log = File(file_name_out)
+	fl_log.writeText("")
 
 	Class.forName(class_forName)
 	try {
@@ -89,6 +91,7 @@ fun do_dba() {
 						else DriverManager.getConnection(uri_DriverManager, dba_user, dba_pw )
 		val sttm = conn.createStatement()
 		for( sql in sqls ){
+			print_write_out(fl_log, "<< ${sql}\n", flg_2print_out)
 			sttm.setQueryTimeout(query_timeout)
 			var rs: ResultSet = sttm.executeQuery(sql)
 			var rsmd: ResultSetMetaData = rs.getMetaData()
@@ -96,13 +99,13 @@ fun do_dba() {
 			val msec_started = (System.currentTimeMillis() as Long)?: 0L
 			while (rs.next()) {
 				for (i in IntRange(1, rsmd.getColumnCount())) {
-					print(rs.getString(i))
-					print( if(i < rsmd.getColumnCount()) "," else "")
+					print_write_out(fl_log, rs.getString(i), flg_2print_out)
+					print_write_out(fl_log, if(i < rsmd.getColumnCount()) "|||" else "" , flg_2print_out)
 				}
-				print(System.getProperty("line.separator"))
+				print_write_out(fl_log, System.getProperty("line.separator"), flg_2print_out)
 				cnt++
-				if(safety_counts<cnt) break;
-				println("  safety_sec: ${safety_seconds}, during_msec: ${System.currentTimeMillis() - msec_started}")
+				if(safety_counts<cnt) break
+//				println("  safety_sec: ${safety_seconds}, during_msec: ${System.currentTimeMillis() - msec_started}")
 				if(safety_seconds*1000L < System.currentTimeMillis() - msec_started){
 					flg_overtime = true
 					break
@@ -111,11 +114,11 @@ fun do_dba() {
 			println(" rs size: ${cnt}")
 			if(safety_counts<cnt){
 				println("[warn] query records has been over the limit: ${cnt}")
-				break;
+				break
 			}
 			if(flg_overtime){
 				println("[warn] query time has been over the limit: ${safety_seconds} seconds")
-				break;
+				break
 			}
 		}
 		sttm.close()

@@ -1,5 +1,4 @@
-@echo on
-umask 022
+@echo off
 
 set Bin_java=c:\tools\pleiades\java\8\bin\java
 set Option_java=-Xmx2048m -Xms384m
