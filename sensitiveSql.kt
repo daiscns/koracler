@@ -112,6 +112,7 @@ fun do_dba() {
 				}
 			}
 			println(" rs size: ${cnt}")
+			println("  safety_sec: ${safety_seconds}, during_msec: ${System.currentTimeMillis() - msec_started}")
 			if(safety_counts<cnt){
 				println("[warn] query records has been over the limit: ${cnt}")
 				break
